@@ -14,6 +14,13 @@ fn main() {
     );
 }
 
+#[derive(Debug, Clone, PartialEq, Default)]
+enum Screen {
+    #[default]
+    Main,
+    Rtcm3Inspector,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum ConnectionStatus {
     Disconnected,
@@ -37,6 +44,7 @@ struct RtcmViewApp {
     stop_tx: Option<Sender<()>>,
     received_data: Vec<u8>,
     log_messages: Vec<String>,
+    current_screen: Screen,
 }
 
 impl Default for RtcmViewApp {
@@ -49,6 +57,7 @@ impl Default for RtcmViewApp {
             stop_tx: None,
             received_data: Vec::new(),
             log_messages: Vec::new(),
+            current_screen: Screen::default(),
         }
     }
 }
@@ -207,10 +216,8 @@ fn format_hex_dump(data: &[u8]) -> String {
     result
 }
 
-impl eframe::App for RtcmViewApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.poll_events();
-
+impl RtcmViewApp {
+    fn show_main_screen(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("connection_panel").show(ctx, |ui| {
             ui.heading("RTCM Stream Viewer");
             ui.separator();
@@ -247,7 +254,10 @@ impl eframe::App for RtcmViewApp {
                         ui.colored_label(egui::Color32::GRAY, "Disconnected");
                     }
                     ConnectionStatus::Connecting => {
-                        ui.colored_label(egui::Color32::YELLOW, "Connecting...");
+                        ui.colored_label(
+                            egui::Color32::YELLOW,
+                            "Connecting...",
+                        );
                     }
                     ConnectionStatus::Connected => {
                         ui.colored_label(egui::Color32::GREEN, "Connected");
@@ -282,6 +292,22 @@ impl eframe::App for RtcmViewApp {
             });
             ui.separator();
 
+            let is_connected =
+                self.connection_status == ConnectionStatus::Connected;
+            ui.add_enabled_ui(is_connected, |ui| {
+                if ui.button("RTCM3_Inspector").clicked() {
+                    self.current_screen = Screen::Rtcm3Inspector;
+                }
+            });
+            if !is_connected {
+                ui.label(
+                    egui::RichText::new("Connect to a stream to enable inspector.")
+                        .small()
+                        .color(egui::Color32::GRAY),
+                );
+            }
+            ui.separator();
+
             egui::ScrollArea::vertical()
                 .auto_shrink([false; 2])
                 .stick_to_bottom(true)
@@ -301,5 +327,34 @@ impl eframe::App for RtcmViewApp {
                     }
                 });
         });
+    }
+
+    fn show_rtcm3_inspector(&mut self, ctx: &egui::Context) {
+        egui::TopBottomPanel::top("inspector_top").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("< Back").clicked() {
+                    self.current_screen = Screen::Main;
+                }
+                ui.heading("RTCM3 Inspector");
+            });
+        });
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.colored_label(
+                egui::Color32::GRAY,
+                "RTCM3 decode / display will be implemented here.",
+            );
+        });
+    }
+}
+
+impl eframe::App for RtcmViewApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.poll_events();
+
+        match self.current_screen {
+            Screen::Main => self.show_main_screen(ctx),
+            Screen::Rtcm3Inspector => self.show_rtcm3_inspector(ctx),
+        }
     }
 }
