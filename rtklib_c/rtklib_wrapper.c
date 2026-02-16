@@ -32,8 +32,11 @@ rtcm_decode_result_t rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data) {
 
     result.ret = input_rtcm3(rtcm, data);
 
-    /* Extract message type from buffer if we have at least 3 bytes */
-    if (rtcm->nbyte >= 3) {
+    /* When a message is decoded (ret>0), nbyte is already reset to 0,
+       but buff still contains the last message data */
+    if (result.ret > 0) {
+        result.msg_type = (int)getbitu(rtcm->buff, 24, 12);
+    } else if (rtcm->nbyte >= 3) {
         result.msg_type = (int)getbitu(rtcm->buff, 24, 12);
     }
 
