@@ -46,7 +46,7 @@ typedef struct {
     char msg_type_str[256]; /* message type description string */
 } rtcm_decode_result_t;
 
-/* Allocate and initialize an rtcm_t struct */
+/* Allocate and initialize an rtcm_t struct (sets outtype=1 for msgtype) */
 rtcm_t *rtklib_alloc_rtcm(void);
 
 /* Free an rtcm_t struct */

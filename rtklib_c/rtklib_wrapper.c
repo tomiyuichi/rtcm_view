@@ -17,6 +17,7 @@ rtcm_t *rtklib_alloc_rtcm(void) {
         free(rtcm);
         return NULL;
     }
+    rtcm->outtype = 1; /* enable msgtype string output in decode_rtcm3 */
     return rtcm;
 }
 
@@ -32,17 +33,21 @@ rtcm_decode_result_t rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data) {
 
     result.ret = input_rtcm3(rtcm, data);
 
-    /* When a message is decoded (ret>0), nbyte is already reset to 0,
-       but buff still contains the last message data */
-    if (result.ret > 0) {
-        result.msg_type = (int)getbitu(rtcm->buff, 24, 12);
-    } else if (rtcm->nbyte >= 3) {
-        result.msg_type = (int)getbitu(rtcm->buff, 24, 12);
-    }
+    if (result.ret != 0) {
+        /* msgtype is set by decode_rtcm3 when outtype=1,
+           format: "RTCM NNNN (LLLL):" — parse NNNN */
+        result.msg_type = 0;
+        const char *p = rtcm->msgtype;
+        /* skip "RTCM " prefix, then read the number */
+        while (*p && (*p < '0' || *p > '9')) p++;
+        while (*p >= '0' && *p <= '9') {
+            result.msg_type = result.msg_type * 10 + (*p - '0');
+            p++;
+        }
 
-    /* Copy the message type string */
-    strncpy(result.msg_type_str, rtcm->msgtype, sizeof(result.msg_type_str) - 1);
-    result.msg_type_str[sizeof(result.msg_type_str) - 1] = '\0';
+        strncpy(result.msg_type_str, rtcm->msgtype, sizeof(result.msg_type_str) - 1);
+        result.msg_type_str[sizeof(result.msg_type_str) - 1] = '\0';
+    }
 
     return result;
 }
