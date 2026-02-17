@@ -27,29 +27,24 @@ void rtklib_free_rtcm(rtcm_t *rtcm) {
     free(rtcm);
 }
 
-rtcm_decode_result_t rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data) {
-    rtcm_decode_result_t result;
-    memset(&result, 0, sizeof(result));
+void rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data, rtcm_decode_result_t *out) {
+    memset(out, 0, sizeof(*out));
 
-    result.ret = input_rtcm3(rtcm, data);
+    out->ret = input_rtcm3(rtcm, data);
 
-    if (result.ret != 0) {
+    if (out->ret != 0) {
         /* msgtype is set by decode_rtcm3 when outtype=1,
            format: "RTCM NNNN (LLLL):" — parse NNNN */
-        result.msg_type = 0;
         const char *p = rtcm->msgtype;
-        /* skip "RTCM " prefix, then read the number */
         while (*p && (*p < '0' || *p > '9')) p++;
         while (*p >= '0' && *p <= '9') {
-            result.msg_type = result.msg_type * 10 + (*p - '0');
+            out->msg_type = out->msg_type * 10 + (*p - '0');
             p++;
         }
 
-        strncpy(result.msg_type_str, rtcm->msgtype, sizeof(result.msg_type_str) - 1);
-        result.msg_type_str[sizeof(result.msg_type_str) - 1] = '\0';
+        strncpy(out->msg_type_str, rtcm->msgtype, sizeof(out->msg_type_str) - 1);
+        out->msg_type_str[sizeof(out->msg_type_str) - 1] = '\0';
     }
-
-    return result;
 }
 
 int rtklib_get_obs_count(const rtcm_t *rtcm) {

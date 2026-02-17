@@ -58,7 +58,7 @@ pub struct RtcmDecodeResult {
 unsafe extern "C" {
     fn rtklib_alloc_rtcm() -> RtcmPtr;
     fn rtklib_free_rtcm(rtcm: RtcmPtr);
-    fn rtklib_input_rtcm3(rtcm: RtcmPtr, data: u8) -> RtcmDecodeResult;
+    fn rtklib_input_rtcm3(rtcm: RtcmPtr, data: u8, out: *mut RtcmDecodeResult);
     fn rtklib_get_obs_count(rtcm: RtcmPtr) -> c_int;
     fn rtklib_get_obs(rtcm: RtcmPtr, index: c_int, out: *mut RtcmObs) -> c_int;
     fn rtklib_get_sta(rtcm: RtcmPtr, out: *mut RtcmSta) -> c_int;
@@ -167,7 +167,11 @@ impl RtcmDecoder {
 
     /// Feed one byte into the decoder. Returns Some(event) when a message is decoded.
     pub fn input(&mut self, byte: u8) -> Option<RtcmEvent> {
-        let result = unsafe { rtklib_input_rtcm3(self.ptr, byte) };
+        let mut result = std::mem::MaybeUninit::<RtcmDecodeResult>::uninit();
+        unsafe {
+            rtklib_input_rtcm3(self.ptr, byte, result.as_mut_ptr());
+        }
+        let result = unsafe { result.assume_init() };
         let ret = result.ret as i32;
 
         if ret <= 0 {

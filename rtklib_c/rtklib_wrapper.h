@@ -52,8 +52,8 @@ rtcm_t *rtklib_alloc_rtcm(void);
 /* Free an rtcm_t struct */
 void rtklib_free_rtcm(rtcm_t *rtcm);
 
-/* Feed one byte into the RTCM3 decoder. Returns decode result. */
-rtcm_decode_result_t rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data);
+/* Feed one byte into the RTCM3 decoder. Writes result to *out. */
+void rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data, rtcm_decode_result_t *out);
 
 /* Get the number of observations in the last decoded message */
 int rtklib_get_obs_count(const rtcm_t *rtcm);
