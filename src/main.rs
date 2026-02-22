@@ -10,6 +10,29 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
+fn config_path() -> std::path::PathBuf {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_default()
+        .join("rtcm_view.conf")
+}
+
+fn load_config() -> (String, String) {
+    let content = std::fs::read_to_string(config_path()).unwrap_or_default();
+    let mut host = "127.0.0.1".to_string();
+    let mut port = "2101".to_string();
+    for line in content.lines() {
+        if let Some(v) = line.strip_prefix("host=") { host = v.to_string(); }
+        else if let Some(v) = line.strip_prefix("port=") { port = v.to_string(); }
+    }
+    (host, port)
+}
+
+fn save_config(host: &str, port: &str) {
+    let _ = std::fs::write(config_path(), format!("host={}\nport={}\n", host, port));
+}
+
 fn main() {
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
@@ -65,11 +88,18 @@ struct RtcmViewApp {
     msg_type_counts: std::collections::BTreeMap<i32, u32>,
 }
 
+impl Drop for RtcmViewApp {
+    fn drop(&mut self) {
+        save_config(&self.host, &self.port);
+    }
+}
+
 impl Default for RtcmViewApp {
     fn default() -> Self {
+        let (host, port) = load_config();
         Self {
-            host: "127.0.0.1".to_string(),
-            port: "2101".to_string(),
+            host,
+            port,
             connection_status: ConnectionStatus::Disconnected,
             rx: None,
             stop_tx: None,
