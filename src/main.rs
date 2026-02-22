@@ -2,6 +2,9 @@
 
 mod rtklib_ffi;
 
+const GIT_DESCRIBE: &str = env!("GIT_DESCRIBE");
+const GIT_HASH: &str = env!("GIT_HASH");
+
 use eframe::egui;
 use rtklib_ffi::{RtcmDecoder, RtcmEvent};
 use std::io::Read;
@@ -392,7 +395,16 @@ fn format_hex_dump(data: &[u8]) -> String {
 impl RtcmViewApp {
     fn show_main_screen(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("connection_panel").show(ctx, |ui| {
-            ui.heading("RTCM Stream Viewer");
+            ui.horizontal(|ui| {
+                ui.heading("RTCM Stream Viewer");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        egui::RichText::new(format!("{} ({})", GIT_DESCRIBE, GIT_HASH))
+                            .small()
+                            .color(egui::Color32::GRAY),
+                    );
+                });
+            });
             ui.separator();
 
             ui.horizontal(|ui| {

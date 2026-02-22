@@ -1,4 +1,28 @@
+fn git_info() -> (String, String) {
+    let describe = std::process::Command::new("git")
+        .args(["describe", "--tags", "--always", "--dirty"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    let hash = std::process::Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    (describe, hash)
+}
+
 fn main() {
+    // git HEAD が変わったら再ビルド
+    println!("cargo:rerun-if-changed=.git/HEAD");
+    println!("cargo:rerun-if-changed=.git/refs");
+
+    let (describe, hash) = git_info();
+    println!("cargo:rustc-env=GIT_DESCRIBE={}", describe);
+    println!("cargo:rustc-env=GIT_HASH={}", hash);
+
     cc::Build::new()
         .include("rtklib_c")
         .files(&[
