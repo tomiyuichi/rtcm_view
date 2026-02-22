@@ -3,7 +3,9 @@ fn main() {
         .include("rtklib_c")
         .files(&[
             "rtklib_c/rtcm.c",
+            "rtklib_c/rtcm2.c",
             "rtklib_c/rtcm3.c",
+            "rtklib_c/rtcm3e.c",
             "rtklib_c/rtkcmn.c",
             "rtklib_c/solution.c",
             "rtklib_c/trace.c",
@@ -15,6 +17,7 @@ fn main() {
         .define("ENAQZS", None)
         .define("ENAIRN", None)
         .define("TRACE", None)
+        .define("WIN32", None)
         .warnings(false)
         .compile("rtklib");
 }

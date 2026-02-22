@@ -53,7 +53,7 @@ extern "C" {
 #ifdef WIN_DLL /* for Windows DLL */
 #define EXPORT __declspec(dllexport)
 #else
-#define EXPORT __declspec(dllimport)
+#define EXPORT
 #endif
 #else
 #define EXPORT
@@ -64,7 +64,7 @@ extern "C" {
 #elif defined(__GNUC__)
 #define THREADLOCAL __thread
 #elif defined(_MSC_VER)
-#define THREADLOCAL __declspec(__thread)
+#define THREADLOCAL __declspec(thread)
 #else
 #define THREADLOCAL
 #endif
