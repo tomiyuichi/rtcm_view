@@ -36,8 +36,27 @@ fn save_config(host: &str, port: &str) {
     let _ = std::fs::write(config_path(), format!("host={}\nport={}\n", host, port));
 }
 
+fn load_icon() -> Option<std::sync::Arc<egui::IconData>> {
+    let bytes = include_bytes!("../assets/icon.png");
+    let img = image::load_from_memory(bytes).ok()?;
+    let rgba = img.to_rgba8();
+    let (width, height) = rgba.dimensions();
+    Some(std::sync::Arc::new(egui::IconData {
+        rgba: rgba.into_raw(),
+        width,
+        height,
+    }))
+}
+
 fn main() {
-    let options = eframe::NativeOptions::default();
+    let mut viewport = egui::ViewportBuilder::default();
+    if let Some(icon) = load_icon() {
+        viewport = viewport.with_icon(icon);
+    }
+    let options = eframe::NativeOptions {
+        viewport,
+        ..Default::default()
+    };
     let _ = eframe::run_native(
         "RTCM View",
         options,

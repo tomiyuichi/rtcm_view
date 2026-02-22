@@ -15,6 +15,14 @@ fn git_info() -> (String, String) {
 }
 
 fn main() {
+    // exe アイコンの埋め込み（Windows 用、assets/icon.ico がある場合のみ）
+    #[cfg(target_os = "windows")]
+    if std::path::Path::new("assets/icon.ico").exists() {
+        let mut res = winres::WindowsResource::new();
+        res.set_icon("assets/icon.ico");
+        res.compile().expect("Failed to compile Windows resources");
+    }
+
     // git HEAD が変わったら再ビルド
     println!("cargo:rerun-if-changed=.git/HEAD");
     println!("cargo:rerun-if-changed=.git/refs");
