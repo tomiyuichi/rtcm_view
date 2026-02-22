@@ -293,6 +293,14 @@ fn rtcm_event_to_log(event: &RtcmEvent) -> RtcmMessageLog {
                 staid, pos[0], pos[1], pos[2], antdes
             ),
         },
+        RtcmEvent::Synced {
+            msg_type,
+            msg_desc,
+        } => RtcmMessageLog {
+            msg_type: *msg_type,
+            msg_desc: msg_desc.clone(),
+            detail: "(sync=1, more follow)".to_string(),
+        },
         RtcmEvent::Ssr {
             msg_type,
             msg_desc,

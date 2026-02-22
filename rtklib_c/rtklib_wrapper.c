@@ -30,11 +30,13 @@ void rtklib_free_rtcm(rtcm_t *rtcm) {
 void rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data, rtcm_decode_result_t *out) {
     memset(out, 0, sizeof(*out));
 
+    /* Clear msgtype before call so we can detect if decode_rtcm3 ran */
+    rtcm->msgtype[0] = '\0';
+
     out->ret = input_rtcm3(rtcm, data);
 
-    if (out->ret != 0) {
-        /* msgtype is set by decode_rtcm3 when outtype=1,
-           format: "RTCM NNNN (LLLL):" — parse NNNN */
+    /* If msgtype was written, a complete frame was decoded (even if ret=0 due to sync) */
+    if (rtcm->msgtype[0] != '\0') {
         const char *p = rtcm->msgtype;
         while (*p && (*p < '0' || *p > '9')) p++;
         while (*p >= '0' && *p <= '9') {
@@ -44,6 +46,11 @@ void rtklib_input_rtcm3(rtcm_t *rtcm, uint8_t data, rtcm_decode_result_t *out) {
 
         strncpy(out->msg_type_str, rtcm->msgtype, sizeof(out->msg_type_str) - 1);
         out->msg_type_str[sizeof(out->msg_type_str) - 1] = '\0';
+
+        /* If ret==0 but a message was decoded (sync=1 MSM), signal it as ret=-10 */
+        if (out->ret == 0) {
+            out->ret = -10; /* decoded but synced (more messages in epoch) */
+        }
     }
 }
 

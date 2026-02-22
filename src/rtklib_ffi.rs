@@ -109,6 +109,11 @@ pub enum RtcmEvent {
         msg_type: i32,
         msg_desc: String,
     },
+    /// Message decoded but sync=1 (more messages in this epoch follow)
+    Synced {
+        msg_type: i32,
+        msg_desc: String,
+    },
     /// Other message decoded (non-zero return)
     Other {
         msg_type: i32,
@@ -174,12 +179,22 @@ impl RtcmDecoder {
         let result = unsafe { result.assume_init() };
         let ret = result.ret as i32;
 
-        if ret <= 0 {
+        // ret==0: still accumulating bytes (no frame decoded)
+        // ret==-10: frame decoded but sync=1 (more MSM messages follow)
+        // ret>0: frame decoded with data ready
+        if ret == 0 {
             return None;
         }
 
         let msg_type = result.msg_type as i32;
         let msg_desc = c_char_to_string(&result.msg_type_str);
+
+        if ret == -10 {
+            return Some(RtcmEvent::Synced {
+                msg_type,
+                msg_desc,
+            });
+        }
 
         match ret {
             1 => {
