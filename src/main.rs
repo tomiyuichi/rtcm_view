@@ -67,6 +67,7 @@ fn main() {
 #[derive(Debug, Clone, PartialEq, Default)]
 enum Screen {
     #[default]
+    Splash,
     Main,
     Rtcm3Inspector,
 }
@@ -108,6 +109,9 @@ struct RtcmViewApp {
     // RTCM3 Inspector state
     rtcm_messages: Vec<RtcmMessageLog>,
     msg_type_counts: std::collections::BTreeMap<i32, u32>,
+    // Splash screen
+    splash_start: std::time::Instant,
+    icon_texture: Option<egui::TextureHandle>,
 }
 
 impl Drop for RtcmViewApp {
@@ -131,6 +135,8 @@ impl Default for RtcmViewApp {
             current_screen: Screen::default(),
             rtcm_messages: Vec::new(),
             msg_type_counts: std::collections::BTreeMap::new(),
+            splash_start: std::time::Instant::now(),
+            icon_texture: None,
         }
     }
 }
@@ -412,6 +418,65 @@ fn format_hex_dump(data: &[u8]) -> String {
 // -- UI screens --
 
 impl RtcmViewApp {
+    fn show_splash_screen(&mut self, ctx: &egui::Context) {
+        const SPLASH_SECS: f32 = 0.8;
+
+        let elapsed = self.splash_start.elapsed().as_secs_f32();
+        let progress = (elapsed / SPLASH_SECS).clamp(0.0, 1.0);
+
+        if progress >= 1.0 {
+            self.current_screen = Screen::Main;
+            return;
+        }
+
+        // テクスチャの遅延ロード（ctx が使えるようになってから）
+        if self.icon_texture.is_none() {
+            let bytes = include_bytes!("../assets/icon.png");
+            if let Ok(img) = image::load_from_memory(bytes) {
+                let rgba = img.to_rgba8();
+                let (w, h) = rgba.dimensions();
+                let color_img = egui::ColorImage::from_rgba_unmultiplied(
+                    [w as usize, h as usize],
+                    &rgba.into_raw(),
+                );
+                self.icon_texture = Some(ctx.load_texture(
+                    "splash_icon",
+                    color_img,
+                    egui::TextureOptions::LINEAR,
+                ));
+            }
+        }
+
+        // 次フレームも再描画をリクエスト
+        ctx.request_repaint();
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let available = ui.available_size();
+            let icon_size = (available.x.min(available.y) * 0.45).clamp(64.0, 256.0);
+            let bar_width = icon_size * 1.4;
+            let spacing = 20.0;
+            let bar_height = 14.0;
+            let content_height = icon_size + spacing + bar_height;
+            let top_pad = ((available.y - content_height) / 2.0).max(0.0);
+
+            ui.add_space(top_pad);
+            ui.vertical_centered(|ui| {
+                if let Some(tex) = &self.icon_texture {
+                    let sized = egui::load::SizedTexture::new(
+                        tex.id(),
+                        egui::vec2(icon_size, icon_size),
+                    );
+                    ui.add(egui::Image::new(sized));
+                }
+                ui.add_space(spacing);
+                ui.add(
+                    egui::ProgressBar::new(progress)
+                        .desired_width(bar_width),
+                );
+            });
+        });
+    }
+
     fn show_main_screen(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("connection_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -651,6 +716,7 @@ impl eframe::App for RtcmViewApp {
         self.poll_events();
 
         match self.current_screen {
+            Screen::Splash => self.show_splash_screen(ctx),
             Screen::Main => self.show_main_screen(ctx),
             Screen::Rtcm3Inspector => self.show_rtcm3_inspector(ctx),
         }
